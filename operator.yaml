@@ -2,7 +2,7 @@ operator:
   address: 0xE384A5a8aB7e336F0563FCD756Cf2789C8ebfdfd
   delegation_approver_address: '0x0000000000000000000000000000000000000000'
   staker_opt_out_window_blocks: 0
-  metadata_url: ''
+  metadata_url: 'https://github.com/elingersin1/eigen/blob/master/metadata.json'
 el_delegation_manager_address: 0xA44151489861Fe9e3055d95adC98FbD462B948e7
 eth_rpc_url: https://ethereum-holesky-rpc.publicnode.com
 chain_id: 17000
