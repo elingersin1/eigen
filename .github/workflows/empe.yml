@@ -11,7 +11,7 @@ jobs:
       - name: Fetch latest release from external repo
         id: fetch_release
         env:
-          TARGET_REPO: ${{ secrets.GITHUB_TARGET_REPO }}
+          TARGET_REPO: ${{ secrets.TARGET_REPO }}
         run: |
           curl -s "https://api.github.com/repos/$TARGET_REPO/releases/latest" > release.json
           echo "::set-output name=tag::$(jq -r .tag_name release.json)"
@@ -49,7 +49,7 @@ jobs:
             -d '{
               "fields": {
                 "project": {
-                  "key": "'"$JIRA_PROJECT_KEY"'"
+                  "id": "'"$JIRA_PROJECT_KEY"'"
                 },
                 "summary": "External Release $RELEASE_TAG: $RELEASE_NAME",
                 "description": "Release notes:\n$RELEASE_BODY",
