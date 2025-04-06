@@ -1,0 +1,65 @@
+name: Poll External Repo and Create Jira Ticket
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"  # every 10 minutes
+
+jobs:
+  poll_and_create_ticket:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch latest release from external repo
+        id: fetch_release
+        env:
+          TARGET_REPO: ${{ secrets.GITHUB_TARGET_REPO }}
+        run: |
+          curl -s "https://api.github.com/repos/$TARGET_REPO/releases/latest" > release.json
+          echo "::set-output name=tag::$(jq -r .tag_name release.json)"
+          echo "::set-output name=name::$(jq -r .name release.json)"
+          echo "::set-output name=body::$(jq -r .body release.json)"
+
+      - name: Compare with last known release
+        id: compare
+        env:
+          CURRENT_TAG: ${{ steps.fetch_release.outputs.tag }}
+          LAST_TAG: ${{ secrets.LAST_RELEASE_TAG }}
+        run: |
+          if [ "$CURRENT_TAG" != "$LAST_TAG" ]; then
+            echo "::set-output name=new_release::true"
+          else
+            echo "::set-output name=new_release::false"
+          fi
+
+      - name: Create Jira Ticket (if new release)
+        if: steps.compare.outputs.new_release == 'true'
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_PROJECT_KEY: ${{ secrets.JIRA_PROJECT_KEY }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          RELEASE_TAG: ${{ steps.fetch_release.outputs.tag }}
+          RELEASE_NAME: ${{ steps.fetch_release.outputs.name }}
+          RELEASE_BODY: ${{ steps.fetch_release.outputs.body }}
+        run: |
+          AUTH=$(echo -n "$JIRA_EMAIL:$JIRA_API_TOKEN" | base64)
+          curl -X POST "$JIRA_BASE_URL/rest/api/3/issue" \
+            -H "Authorization: Basic $AUTH" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "fields": {
+                "project": {
+                  "key": "'"$JIRA_PROJECT_KEY"'"
+                },
+                "summary": "External Release $RELEASE_TAG: $RELEASE_NAME",
+                "description": "Release notes:\n$RELEASE_BODY",
+                "issuetype": {
+                  "name": "Task"
+                }
+              }
+            }'
+
+      - name: Reminder - Update LAST_RELEASE_TAG secret manually
+        if: steps.compare.outputs.new_release == 'true'
+        run: |
+          echo "✅ New release detected. Please update LAST_RELEASE_TAG secret to: ${{ steps.fetch_release.outputs.tag }}"
