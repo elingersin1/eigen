@@ -3,6 +3,7 @@ name: Poll External Repo and Create Jira Ticket
 on:
   schedule:
     - cron: "*/10 * * * *"  # every 10 minutes
+  workflow_dispatch:
 
 jobs:
   poll_and_create_ticket:
